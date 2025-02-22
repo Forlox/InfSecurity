@@ -1,89 +1,7 @@
 import sys
-
 from PySide6.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QMessageBox, QListWidget, QInputDialog
+import dataDefs as d
 
-
-def userVerification(login, password):
-    with open("data.txt", 'r') as file:
-        lines = file.readlines()
-        for line in lines:
-            parts = line.strip().split(' ')
-            if len(parts) < 2:
-                continue  # Пропустить некорректные строки
-            loginInDB = parts[0]
-            passwordInDB = parts[1]
-            extraData = ' '.join(parts[2:]) if len(parts) > 2 else "00000"
-            if login == loginInDB:
-                if extraData[0] == "1" and password == passwordInDB:
-                    return False, "Пользователь заблокирован"
-                if passwordInDB == "":  # Пустой пароль
-                    updatePassword(login, "", password)
-                    return True, "Успешная регистрация, " + login
-                elif password == passwordInDB:
-                    return True, "Успешный вход"
-        return False, "Неверный логин/пароль"
-
-
-def updatePassword(login, oldPassword, newPassword):
-    with open("data.txt", 'r') as file:
-        lines = file.readlines()
-
-    with open("data.txt", 'w') as file:
-        for line in lines:
-            parts = line.strip().split(' ')
-            if len(parts) < 2:
-                file.write(line)  # Пропустить некорректные строки
-                continue
-            loginInDB = parts[0]
-            passwordInDB = parts[1]
-            extraData = ' '.join(parts[2:]) if len(parts) > 2 else "00000"
-
-            if login == loginInDB and (oldPassword == passwordInDB or passwordInDB == ""):
-                file.write(f"{login} {newPassword} {extraData}\n")
-            else:
-                file.write(line)
-
-
-def addUser(login):
-    with open("data.txt", 'a') as file:
-        file.write(f"{login}  0\n")  # Пустой пароль и флаг 0
-
-
-def toggleUserBlock(login):
-    with open("data.txt", 'r') as file:
-        lines = file.readlines()
-
-    with open("data.txt", 'w') as file:
-        for line in lines:
-            parts = line.strip().split(' ')
-            if len(parts) < 2:
-                file.write(line)  # Пропустить некорректные строки
-                continue
-            loginInDB = parts[0]
-            passwordInDB = parts[1]
-            extraData = ' '.join(parts[2:]) if len(parts) > 2 else "00000"
-
-            if login == loginInDB:
-                newFlag = "1" if extraData[0] == "0" else "0"
-                file.write(f"{login} {passwordInDB} {newFlag}\n")
-            else:
-                file.write(line)
-
-
-def passwordParams(password):
-    flags = ['0', '0', '0', '0']
-
-    for c in password:
-        if c.islower():
-            flags[0] = '1'
-        if c.isupper():
-            flags[1] = '1'
-        if c.isdigit():
-            flags[2] = '1'
-        if not (c.islower() or c.isupper() or c.isdigit()):
-            flags[3] = '1'
-
-    return ''.join(flags)
 
 class VerificationWindow(QWidget):
     def __init__(self):
@@ -113,8 +31,21 @@ class VerificationWindow(QWidget):
         login = self.loginInput.text()
         password = self.passwordInput.text()
 
-        success, message = userVerification(login, password)
+        # Проверка на пустые поля
+        if not login or not password:
+            QMessageBox.warning(self, "Ошибка", "Поля не могут быть пустыми!")
+            return
+
+        success, message = d.userVerification(login, password)
         if success:
+            # Если пароль пустой (первый вход), проверяем флаги
+            userData = d.getUserData(login)
+            if userData and userData[1] == "":
+                flags = d.getFlags(login)
+                if flags != d.passwordFlags(password):
+                    QMessageBox.warning(self, "Ошибка", "Пароль не соответствует требованиям.")
+                    return
+            ############
             QMessageBox.information(self, "Успех", message)
             if login == "ADMIN":
                 self.mainWindow = MainADMINWindow()
@@ -173,12 +104,104 @@ class MainUserWindow(QWidget):
             QMessageBox.warning(self, "Ошибка", "Новый пароль не может содержать пробелы!")
             return
 
-        if not userVerification(self.username, oldPassword)[0]:
+        if not d.userVerification(self.username, oldPassword)[0]:
             QMessageBox.warning(self, "Ошибка", "Старый пароль неверный!")
             return
 
-        updatePassword(self.username, oldPassword, newPassword)
+        # Проверка нового пароля на соответствие флагам
+        flags = d.getFlags(self.username)
+        if flags != d.passwordFlags(newPassword):
+            QMessageBox.warning(self, "Ошибка", "Новый пароль не соответствует требованиям.")
+            return
+
+        d.updatePassword(self.username, oldPassword, newPassword)
         QMessageBox.information(self, "Успех", "Пароль успешно изменен!")
+
+
+class changePassFlagsWindow(QWidget):
+    def __init__(self, username):
+        super().__init__()
+        self.setWindowTitle("Ограничения на пароли")
+        lay = QVBoxLayout()
+
+        self.label1 = QLabel("Логин пользователя:")
+        self.input = QLineEdit()
+        self.input.setText(username)  # Устанавливаем выбранного пользователя
+        self.input.setReadOnly(True)  # Запрещаем редактирование
+
+        self.userStatusLabel = QLabel("Флаги пароля:")
+        self.label2 = QLabel("Статус флагов:")
+
+        # Метки для отображения статуса флагов
+        self.flagLowerStatus = QLabel("Нижний регистр: -")
+        self.flagUpperStatus = QLabel("Верхний регистр: -")
+        self.flagDigitStatus = QLabel("Цифры: -")
+        self.flagSpecialStatus = QLabel("Специальные символы: -")
+
+        # Кнопки для изменения флагов
+        self.buttonFlagLower = QPushButton("Нижний регистр")
+        self.buttonFlagLower.clicked.connect(lambda: self.changeFlags(0))
+        self.buttonFlagUpper = QPushButton("Верхний регистр")
+        self.buttonFlagUpper.clicked.connect(lambda: self.changeFlags(1))
+        self.buttonFlagDigit = QPushButton("Цифры")
+        self.buttonFlagDigit.clicked.connect(lambda: self.changeFlags(2))
+        self.buttonFlagSpecial = QPushButton("Специальные символы")
+        self.buttonFlagSpecial.clicked.connect(lambda: self.changeFlags(3))
+
+        lay.addWidget(self.label1)
+        lay.addWidget(self.input)
+        lay.addWidget(self.userStatusLabel)
+        lay.addWidget(self.label2)
+        lay.addWidget(self.flagLowerStatus)
+        lay.addWidget(self.flagUpperStatus)
+        lay.addWidget(self.flagDigitStatus)
+        lay.addWidget(self.flagSpecialStatus)
+        lay.addWidget(self.buttonFlagLower)
+        lay.addWidget(self.buttonFlagUpper)
+        lay.addWidget(self.buttonFlagDigit)
+        lay.addWidget(self.buttonFlagSpecial)
+
+        self.setLayout(lay)
+        self.updateUserStatus()  # Инициализация статуса при запуске
+
+    def updateUserStatus(self):
+        username = self.input.text()
+        userData = d.getUserData(username)
+
+        if userData:
+            flags = d.getFlags(username)
+            self.userStatusLabel.setText(f"Флаги пароля: {flags}")
+            self.enableButtons(True)  # Включаем кнопки, если пользователь найден
+            self.updateFlagStatuses(flags)  # Обновляем статусы флагов
+        else:
+            self.userStatusLabel.setText("Пользователь не найден")
+            self.enableButtons(False)  # Отключаем кнопки, если пользователь не найден
+            self.clearFlagStatuses()  # Очищаем статусы флагов
+
+    def enableButtons(self, enabled):
+        self.buttonFlagLower.setEnabled(enabled)
+        self.buttonFlagUpper.setEnabled(enabled)
+        self.buttonFlagDigit.setEnabled(enabled)
+        self.buttonFlagSpecial.setEnabled(enabled)
+
+    def updateFlagStatuses(self, flags):
+        # Обновляем текстовые метки для каждого флага
+        self.flagLowerStatus.setText(f"Нижний регистр: {'Включен' if flags[1] == '1' else 'Отключен'}")
+        self.flagUpperStatus.setText(f"Верхний регистр: {'Включен' if flags[2] == '1' else 'Отключен'}")
+        self.flagDigitStatus.setText(f"Цифры: {'Включен' if flags[3] == '1' else 'Отключен'}")
+        self.flagSpecialStatus.setText(f"Специальные символы: {'Включен' if flags[4] == '1' else 'Отключен'}")
+
+    def changeFlags(self, flagPos):
+        username = self.input.text()
+        userData = d.getUserData(username)
+
+        if userData:
+            flags = list(d.getFlags(username))  # Преобразуем строку флагов в список
+            if 0 <= flagPos < len(flags) - 1:  # Учитываем, что первый символ — это флаг блокировки
+                flags[flagPos + 1] = '1' if flags[flagPos + 1] == '0' else '0'  # Меняем флаг на противоположный
+                userData[2] = ''.join(flags)
+                d.writeUserData(userData)
+                self.updateUserStatus()  # Обновляем статус после изменения флагов
 
 
 class MainADMINWindow(QWidget):
@@ -196,12 +219,16 @@ class MainADMINWindow(QWidget):
         self.toggleBlockButton = QPushButton("Заблокировать/Разблокировать")
         self.toggleBlockButton.clicked.connect(self.toggleUserBlock)
 
+        self.changePassFlagsButton = QPushButton("Изменение параметров пароля")
+        self.changePassFlagsButton.clicked.connect(self.changePassFlags)
+
         self.changePasswordButton = QPushButton("Сменить пароль")
         self.changePasswordButton.clicked.connect(self.changePassword)
 
         layout.addWidget(self.userList)
         layout.addWidget(self.addUserButton)
         layout.addWidget(self.toggleBlockButton)
+        layout.addWidget(self.changePassFlagsButton)
         layout.addWidget(self.changePasswordButton)
 
         self.setLayout(layout)
@@ -220,15 +247,25 @@ class MainADMINWindow(QWidget):
     def addUser(self):
         login, ok = QInputDialog.getText(self, 'Добавить пользователя', 'Введите логин:')
         if ok and login:
-            addUser(login)
+            d.addUser(login)
             self.loadUsers()
 
     def toggleUserBlock(self):
         selectedUser = self.userList.currentItem()
         if selectedUser:
             login = selectedUser.text().split(' - ')[0]
-            toggleUserBlock(login)
+            if login == "ADMIN":
+                QMessageBox.warning(self, "Ошибка", "Невозможно заблокировать ADMIN.")
+                return
+            d.toggleUserBlock(login)
             self.loadUsers()
+
+    def changePassFlags(self):
+        selectedUser = self.userList.currentItem()
+        if selectedUser:
+            username = selectedUser.text().split(' - ')[0]
+            self.flagsWindow = changePassFlagsWindow(username)
+            self.flagsWindow.show()
 
     def changePassword(self):
         self.passwordWindow = MainUserWindow("ADMIN")
