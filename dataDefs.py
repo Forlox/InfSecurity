@@ -27,7 +27,10 @@ def getPassword(username):
     return getUserData(username)[1]
 
 def getFlags(username):
-    return  getUserData(username)[2]
+    userData = getUserData(username)
+    if userData and len(userData) > 3:
+        return userData[3]
+    return "0000"
 
 def userVerification(login, password):
     with open("data.txt", 'r') as file:
@@ -38,9 +41,10 @@ def userVerification(login, password):
                 continue  # Пропустить некорректные строки
             loginInDB = parts[0]
             passwordInDB = parts[1]
-            extraData = ' '.join(parts[2:]) if len(parts) > 2 else "00000"
+            blockFlag = parts[2] if len(parts) > 2 else "0"
+            flags = parts[3] if len(parts) > 3 else "0000"
             if login == loginInDB:
-                if extraData[0] == "1" and password == passwordInDB:
+                if blockFlag == "1" and password == passwordInDB:
                     return False, "Пользователь заблокирован"
                 if passwordInDB == "":  # Пустой пароль
                     updatePassword(login, "", password)
@@ -62,17 +66,18 @@ def updatePassword(login, oldPassword, newPassword):
                 continue
             loginInDB = parts[0]
             passwordInDB = parts[1]
-            extraData = ' '.join(parts[2:]) if len(parts) > 2 else "00000"
+            blockFlag = parts[2] if len(parts) > 2 else "0"
+            flags = parts[3] if len(parts) > 3 else "0000"
 
             if login == loginInDB and (oldPassword == passwordInDB or passwordInDB == ""):
-                file.write(f"{login} {newPassword} {extraData}\n")
+                file.write(f"{login} {newPassword} {blockFlag} {flags}\n")
             else:
                 file.write(line)
 
 
 def addUser(username):
     with open("data.txt", 'a') as file:
-        file.write(f"{username}  01111\n")
+        file.write(f"{username}  0 1111\n")
 
 def toggleUserBlock(username):
     with open("data.txt", 'r') as file:
@@ -86,11 +91,12 @@ def toggleUserBlock(username):
                 continue
             loginInDB = parts[0]
             passwordInDB = parts[1]
-            flags = ' '.join(parts[2:]) if len(parts) > 2 else "00000"
+            blockFlag = parts[2] if len(parts) > 2 else "0"
+            flags = parts[3] if len(parts) > 3 else "0000"
 
             if username == loginInDB:
-                newFlag = "1" if flags[0] == "0" else "00000"
-                file.write(f"{username} {passwordInDB} {newFlag}\n")
+                newFlag = "1" if blockFlag == "0" else "0"
+                file.write(f"{username} {passwordInDB} {newFlag} {flags}\n")
             else:
                 file.write(line)
 

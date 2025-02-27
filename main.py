@@ -83,14 +83,50 @@ class MainUserWindow(QWidget):
         self.acceptPasswordButton = QPushButton("Сменить пароль")
         self.acceptPasswordButton.clicked.connect(self.newPasswordClicked)
 
+        # Метка для отображения разрешённых и запрещённых символов
+        self.allowedCharsLabel = QLabel("")
+        self.updateAllowedCharsLabel()  # Обновляем метку при инициализации
+
         layout.addWidget(self.mainLabel)
         layout.addWidget(self.oldPasswordLabel)
         layout.addWidget(self.oldPasswordInput)
         layout.addWidget(self.newPasswordLabel)
         layout.addWidget(self.newPasswordInput)
         layout.addWidget(self.acceptPasswordButton)
+        layout.addWidget(self.allowedCharsLabel)
 
         self.setLayout(layout)
+
+    def updateAllowedCharsLabel(self):
+        """Обновляет метку с разрешёнными и запрещёнными символами."""
+        flags = d.getFlags(self.username)
+        allowed = []
+        forbidden = []
+
+        if flags[0] == '1':
+            allowed.append("нижний регистр")
+        else:
+            forbidden.append("нижний регистр")
+
+        if flags[1] == '1':
+            allowed.append("верхний регистр")
+        else:
+            forbidden.append("верхний регистр")
+
+        if flags[2] == '1':
+            allowed.append("цифры")
+        else:
+            forbidden.append("цифры")
+
+        if flags[3] == '1':
+            allowed.append("специальные символы")
+        else:
+            forbidden.append("специальные символы")
+
+        self.allowedCharsLabel.setText(
+            f"Разрешено в пароле: {', '.join(allowed) if allowed else 'нет'}\n"
+            f"Запрещено в пароле: {', '.join(forbidden) if forbidden else 'нет'}"
+        )
 
     def newPasswordClicked(self):
         oldPassword = self.oldPasswordInput.text()
@@ -186,10 +222,10 @@ class changePassFlagsWindow(QWidget):
 
     def updateFlagStatuses(self, flags):
         # Обновляем текстовые метки для каждого флага
-        self.flagLowerStatus.setText(f"Нижний регистр: {'Включен' if flags[1] == '1' else 'Отключен'}")
-        self.flagUpperStatus.setText(f"Верхний регистр: {'Включен' if flags[2] == '1' else 'Отключен'}")
-        self.flagDigitStatus.setText(f"Цифры: {'Включен' if flags[3] == '1' else 'Отключен'}")
-        self.flagSpecialStatus.setText(f"Специальные символы: {'Включен' if flags[4] == '1' else 'Отключен'}")
+        self.flagLowerStatus.setText(f"Нижний регистр: {'Включен' if flags[0] == '1' else 'Отключен'}")
+        self.flagUpperStatus.setText(f"Верхний регистр: {'Включен' if flags[1] == '1' else 'Отключен'}")
+        self.flagDigitStatus.setText(f"Цифры: {'Включен' if flags[2] == '1' else 'Отключен'}")
+        self.flagSpecialStatus.setText(f"Специальные символы: {'Включен' if flags[3] == '1' else 'Отключен'}")
 
     def changeFlags(self, flagPos):
         username = self.input.text()
@@ -197,9 +233,9 @@ class changePassFlagsWindow(QWidget):
 
         if userData:
             flags = list(d.getFlags(username))  # Преобразуем строку флагов в список
-            if 0 <= flagPos < len(flags) - 1:  # Учитываем, что первый символ — это флаг блокировки
-                flags[flagPos + 1] = '1' if flags[flagPos + 1] == '0' else '0'  # Меняем флаг на противоположный
-                userData[2] = ''.join(flags)
+            if 0 <= flagPos < len(flags):
+                flags[flagPos] = '1' if flags[flagPos] == '0' else '0'  # Меняем флаг на противоположный
+                userData[3] = ''.join(flags)
                 d.writeUserData(userData)
                 self.updateUserStatus()  # Обновляем статус после изменения флагов
 
@@ -277,7 +313,7 @@ if __name__ == "__main__":
     # Создание файла при первом запуске
     try:
         with open("data.txt", 'x') as file:
-            file.write("ADMIN  0\n")
+            file.write("ADMIN  0 1111\n")
     except FileExistsError:
         pass
 
