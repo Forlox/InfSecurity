@@ -2,7 +2,6 @@ import sys
 from PySide6.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QMessageBox, QListWidget, QInputDialog
 import dataDefs as d
 
-
 class VerificationWindow(QWidget):
     def __init__(self):
         super().__init__()
