@@ -30,46 +30,43 @@ def decryptCaesar(text, k):
 
 if __name__ == "__main__":
     while True:
-        print("\n1 - шифрование, 2 - дешифрование, 0 - выход")
+        print("\n1 - шифрование, 2 - дешифрование")
         mode = int(input("Выберите режим: "))
 
-        if mode == 0:
-            break
-        elif mode == 1:
+        if mode == 1:
             print("= Шифрование файла =")
             inputFile = "text.txt"
         elif mode == 2:
             print("= Расшифровка файла =")
             inputFile = "encC_text.txt"
         else:
-            print("Неверный режим")
-            continue
+            break
 
         k = int(input("Смещение K: "))
 
         try:
-            with open(inputFile, 'r', encoding='utf-8') as file:
+            with open(inputFile, 'r') as file:
                 text = file.read()
         except FileNotFoundError:
             print(f"Ошибка: файл {inputFile} не найден!")
             continue
 
         if mode == 1:
-            encrypted = encryptCaesar(text, k)
-            output_filename = f"encC_{inputFile}"
+            encText = encryptCaesar(text, k)
+            outputFile = f"encC_{inputFile}"
         elif mode == 2:
-            encrypted = decryptCaesar(text, k)
-            output_filename = f"decC_{inputFile}"
+            encText = decryptCaesar(text, k)
+            outputFile = f"decC_{inputFile}"
 
-        with open(output_filename, 'w', encoding='utf-8') as file:
-            file.write(encrypted)
-        print(f"Текст сохранен в {output_filename}")
+        with open(outputFile, 'w') as file:
+            file.write(encText)
+        print(f"Текст сохранен в {outputFile}")
 
         print("\nПервые строки файлов:")
         filesToCheck = ["text.txt", "encC_text.txt", "decC_encC_text.txt"]
         for filename in filesToCheck:
             try:
-                with open(filename, 'r', encoding='utf-8') as file:
+                with open(filename, 'r') as file:
                     firstLine = file.readline().strip()
                     print(f"{filename}: {firstLine}")
             except FileNotFoundError:
