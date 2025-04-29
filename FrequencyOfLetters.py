@@ -50,12 +50,11 @@ class FrequencyOfLetters:
 
 
 if __name__ == "__main__":
-    analyzer = FrequencyOfLetters("1984.txt")
+    analyzer = FrequencyOfLetters()
 
     chrsFrq = analyzer.chrsFrequencyBook()
     print("Словарь вероятностей символов:", chrsFrq)
 
-    print("\nСтатистика символов:")
     analyzer.printStats()
 
     print("\nПостроение диаграммы...")

@@ -49,7 +49,7 @@ def encryptVigenere(text, key, lang, alphabet_mode=1):
 
     for char in text:
         if char.upper() in alphabet:
-            shift = getShiftK(key[key_index % len(key)], alphabet, alphabet_mode)
+            shift = getShiftK(key[key_index % len(key)], alphabet, alphabet_mode) #key_id % len(key) - зацикливание по позиции ключа
             encrypted_chr = encryptCaesar(char, shift)
             encrypted.append(encrypted_chr)
             key_index += 1
@@ -88,8 +88,8 @@ if __name__ == "__main__":
         print("2 - Дешифрование Виженера")
         print("3 - Показать квадрат Виженера")
 
-        mode = int(input("Выберите режим: "))
-
+        # mode = int(input("Выберите режим: "))
+        mode = 1
         if mode not in (1, 2, 3):
             break
         elif mode == 3:
@@ -117,8 +117,8 @@ if __name__ == "__main__":
             print("Выберите режим алфавита:")
             print("1 - По порядку")
             print("2 - Случайным образом ")
-            alphabetMod = int(input())
-
+            # alphabetMod = int(input())
+            alphabetMod = 1
         if alphabetMod not in (1, 2):
             break
 

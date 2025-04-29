@@ -31,8 +31,8 @@ def decryptCaesar(text, k):
 if __name__ == "__main__":
     while True:
         print("\n1 - шифрование, 2 - дешифрование")
-        mode = int(input("Выберите режим: "))
-
+        # mode = int(input("Выберите режим: "))
+        mode = 1
         if mode == 1:
             print("= Шифрование файла =")
             inputFile = "text.txt"

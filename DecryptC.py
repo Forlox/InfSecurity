@@ -15,7 +15,7 @@ def write_file(filename, text):
 
 
 def keyLen(ciphertext, max_len=20):
-    """Определение длины ключа методом индекса совпадений"""
+    """Определение длины ключа методом индекса совпадений с подробным выводом"""
 
     def ic(text):
         freq = {}
@@ -26,47 +26,52 @@ def keyLen(ciphertext, max_len=20):
             return 0
         return sum([count * (count - 1) for count in freq.values()]) / (total * (total - 1))
 
-    # Нормальный IC (индекс совпадений) для английского языка
-    english_ic = 0.0667
+    # Нормальный IC для английского языка
+    englishIC = 0.0667
+
 
     bestLen = 1
     bestDiff = float('inf')
 
+    print("Длина\tСредний IC\tРазница")
+
     for length in range(1, max_len + 1):
-        total_ic = 0.0
-        # Создаем length групп символов
         groups = [''] * length
         for i, c in enumerate(ciphertext):
             groups[i % length] += c
 
-        # Вычисляем средний IC для всех групп
-        valid_groups = 0
-        avg_ic = 0.0
+        validGroups = 0
+        avgIC = 0.0
         for group in groups:
             if len(group) > 1:
                 group_ic = ic(group)
-                avg_ic += group_ic
-                valid_groups += 1
+                avgIC += group_ic
+                validGroups += 1
 
-        if valid_groups == 0:
+        if validGroups == 0:
             continue
 
-        avg_ic /= valid_groups
-        diff = abs(avg_ic - english_ic)
+        avgIC /= validGroups
+        diff = abs(avgIC - englishIC)
+
+        print(f"\t{length}\t{avgIC:.8f}\t{diff:.8f}")
 
         if diff < bestDiff:
             bestDiff = diff
             bestLen = length
 
+    print()
+    print(f"Наиболее вероятная длина ключа: {bestLen} (разница c английским: {bestDiff:8f})")
+    print()
     return bestLen
 
 
-def keyDecrypt(ciphertext, key_length):
+def keyDecrypt(ciphertext, keyLen):
     # Разделяем текст на группы по ключу
-    groups = [''] * key_length
+    groups = [''] * keyLen
     for i, c in enumerate(ciphertext):
         if c.isalpha():
-            groups[i % key_length] += c
+            groups[i % keyLen] += c
 
     key = []
     for group in groups:
@@ -104,12 +109,12 @@ def letterFreq(text):
 
 def decryptVigenere(ciphertext, key):
     decrypted = []
-    key_len = len(key)
+    keyLen = len(key)
     key_index = 0
 
     for c in ciphertext:
         if c.isalpha():
-            shift = ord(key[key_index % key_len]) - ord('a')
+            shift = ord(key[key_index % keyLen]) - ord('a')
             decrypted_char = chr(((ord(c) - ord('a') - shift) % 26) + ord('a'))
             decrypted.append(decrypted_char)
             key_index += 1
@@ -125,11 +130,9 @@ if __name__ == "__main__":
     key_length = keyLen(encText)
     key = keyDecrypt(encText, key_length)
 
-    # Проверяем, все ли символы в ключе одинаковые
     if all(c == key[0] for c in key):
         print("Шифротекст Цезаря")
-        keyC = ord(key[0]) - ord('a')
-        print(f"Ключ К: {keyC}")
+        print(f"Ключ К: {ord(key[0]) - ord('a')}")
     else:
         print("Шифротекст Виженера")
         print(f"Ключ: {key}")
