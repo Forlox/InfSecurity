@@ -2,7 +2,6 @@ import sys
 from PySide6.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QMessageBox, QListWidget, QInputDialog
 import dataDefs as d
 from PasswordAnalisys import alphabet_strength, enumtime, calcSeconds
-import BruteForce
 
 class VerificationWindow(QWidget):
     def __init__(self):
@@ -15,10 +14,10 @@ class VerificationWindow(QWidget):
         self.setWindowTitle("Верификация")
 
         self.loginLabel = QLabel("Логин:")
-        self.loginInput = QLineEdit("ADMIN")
+        self.loginInput = QLineEdit("")
         self.passwordLabel = QLabel("Пароль:")
         self.passwordInput = QLineEdit()
-        self.passwordInput.setEchoMode(QLineEdit.Password)
+        # self.passwordInput.setEchoMode(QLineEdit.Password)
 
         self.loginButton = QPushButton("Войти")
         self.loginButton.clicked.connect(self.loginClicked)
@@ -30,62 +29,59 @@ class VerificationWindow(QWidget):
         layout.addWidget(self.passwordInput)
         layout.addWidget(self.loginButton)
 
-        self.bruteButton = QPushButton("Брутфорс")
-        self.bruteButton.clicked.connect(self.bruteClicked)
         self.checkPasswordButton = QPushButton("Проверка введённого пароля")
         self.checkPasswordButton.clicked.connect(self.checkPasswordClicked)
         self.passwordAnalisysLabel = QLabel("")
 
-        layout.addWidget(self.bruteButton)
         layout.addWidget(self.checkPasswordButton)
         layout.addWidget(self.passwordAnalisysLabel)
 
         self.setLayout(layout)
 
-    def bruteClicked(self):
-        login = self.loginInput.text()
-
-        try:
-            password = d.getPassword(login)
-            if password is None:
-                raise ValueError
-        except Exception:
-            QMessageBox.critical(self, "Ошибка", f"Пользователь '{login}' не найден.")
-            return
-
-        print(f"Password to brute: {password}")
-
-        attemptsBook, timeBook = BruteForce.bruteByBook(login)
-
-        result_text = ""
-
-        if attemptsBook != -1:
-            speedBook = attemptsBook / timeBook if timeBook > 0 else 0
-            result_text += (
-                f"Пароль найден в словаре за {attemptsBook} попыток\n"
-                f"Прошло времени: {timeBook:.2f} сек\n"
-                f"Средняя скорость подбора в сек: {speedBook:.2f}\n"
-            )
-        else:
-            result_text += "Пароль не найден в словаре\n"
-
-
-        maxLen = len(password)
-        strength = alphabet_strength(password)
-        attemptsBrute, timeBrute = BruteForce.bruteForce(login, password, maxLen, strength)
-
-        if attemptsBrute != -1:
-            speedBrute = attemptsBrute / timeBrute if timeBrute > 0 else 0
-            result_text += (
-                "========================\n"
-                f"Пароль подобран за {attemptsBrute} попыток\n"
-                f"Прошло времени: {timeBrute:.2f} сек\n"
-                f"Средняя скорость перебора в сек: {speedBrute:.2f}\n"
-            )
-        else:
-            result_text += "Пароль не удалось подобрать полным перебором\n"
-
-        QMessageBox.information(self, "Результаты брутфорса", result_text)
+    # def bruteClicked(self):
+    #     login = self.loginInput.text()
+    #
+    #     try:
+    #         password = d.getPassword(login)
+    #         if password is None:
+    #             raise ValueError
+    #     except Exception:
+    #         QMessageBox.critical(self, "Ошибка", f"Пользователь '{login}' не найден.")
+    #         return
+    #
+    #     print(f"Password to brute: {password}")
+    #
+    #     attemptsBook, timeBook = BruteForce.bruteByBook(login)
+    #
+    #     result_text = ""
+    #
+    #     if attemptsBook != -1:
+    #         speedBook = attemptsBook / timeBook if timeBook > 0 else 0
+    #         result_text += (
+    #             f"Пароль найден в словаре за {attemptsBook} попыток\n"
+    #             f"Прошло времени: {timeBook:.2f} сек\n"
+    #             f"Средняя скорость подбора в сек: {speedBook:.2f}\n"
+    #         )
+    #     else:
+    #         result_text += "Пароль не найден в словаре\n"
+    #
+    #
+    #     maxLen = len(password)
+    #     strength = 95
+    #     attemptsBrute, timeBrute = BruteForce.bruteForce(login, 'aA1/', maxLen, strength)
+    #
+    #     if attemptsBrute != -1:
+    #         speedBrute = attemptsBrute / timeBrute if timeBrute > 0 else 0
+    #         result_text += (
+    #             "========================\n"
+    #             f"Пароль подобран за {attemptsBrute} попыток\n"
+    #             f"Прошло времени: {timeBrute:.2f} сек\n"
+    #             f"Средняя скорость перебора в сек: {speedBrute:.2f}\n"
+    #         )
+    #     else:
+    #         result_text += "Пароль не удалось подобрать полным перебором\n"
+    #
+    #     QMessageBox.information(self, "Результаты брутфорса", result_text)
 
     def checkPasswordClicked(self):
         password = self.passwordInput.text()
