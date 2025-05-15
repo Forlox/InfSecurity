@@ -1,15 +1,21 @@
 import sys
 from PySide6.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QMessageBox, QListWidget, QInputDialog
 import dataDefs as d
+from PasswordAnalisys import alphabet_strength, enumtime, calcSeconds
+import BruteForce
 
 class VerificationWindow(QWidget):
     def __init__(self):
         super().__init__()
-        self.failedAttempts = 0  # Счетчик неудачных попыток
+        self.s = 5
+        self.m = 1
+        self.u = 1
+
+        self.failedAttempts = 0
         self.setWindowTitle("Верификация")
 
         self.loginLabel = QLabel("Логин:")
-        self.loginInput = QLineEdit()
+        self.loginInput = QLineEdit("ADMIN")
         self.passwordLabel = QLabel("Пароль:")
         self.passwordInput = QLineEdit()
         self.passwordInput.setEchoMode(QLineEdit.Password)
@@ -24,7 +30,66 @@ class VerificationWindow(QWidget):
         layout.addWidget(self.passwordInput)
         layout.addWidget(self.loginButton)
 
+        self.bruteButton = QPushButton("Брутфорс")
+        self.bruteButton.clicked.connect(self.bruteClicked)
+        self.checkPasswordButton = QPushButton("Проверка введённого пароля")
+        self.checkPasswordButton.clicked.connect(self.checkPasswordClicked)
+        self.passwordAnalisysLabel = QLabel("")
+
+        layout.addWidget(self.bruteButton)
+        layout.addWidget(self.checkPasswordButton)
+        layout.addWidget(self.passwordAnalisysLabel)
+
         self.setLayout(layout)
+
+    def bruteClicked(self):
+        login = self.loginInput.text()
+
+        try:
+            password = d.getPassword(login)
+            if password is None:
+                raise ValueError
+        except Exception:
+            QMessageBox.critical(self, "Ошибка", f"Пользователь '{login}' не найден.")
+            return
+
+        print(f"Password to brute: {password}")
+
+        attemptsBook, timeBook = BruteForce.bruteByBook(login)
+
+        result_text = ""
+
+        if attemptsBook != -1:
+            speedBook = attemptsBook / timeBook if timeBook > 0 else 0
+            result_text += (
+                f"Пароль найден в словаре за {attemptsBook} попыток\n"
+                f"Прошло времени: {timeBook:.2f} сек\n"
+                f"Средняя скорость подбора в сек: {speedBook:.2f}\n"
+            )
+        else:
+            result_text += "Пароль не найден в словаре\n"
+
+
+        maxLen = len(password)
+        strength = alphabet_strength(password)
+        attemptsBrute, timeBrute = BruteForce.bruteForce(login, password, maxLen, strength)
+
+        if attemptsBrute != -1:
+            speedBrute = attemptsBrute / timeBrute if timeBrute > 0 else 0
+            result_text += (
+                "========================\n"
+                f"Пароль подобран за {attemptsBrute} попыток\n"
+                f"Прошло времени: {timeBrute:.2f} сек\n"
+                f"Средняя скорость перебора в сек: {speedBrute:.2f}\n"
+            )
+        else:
+            result_text += "Пароль не удалось подобрать полным перебором\n"
+
+        QMessageBox.information(self, "Результаты брутфорса", result_text)
+
+    def checkPasswordClicked(self):
+        password = self.passwordInput.text()
+        self.passwordAnalisysLabel.setText(enumtime(self.s,self.m,self.u, alphabet_strength(password)**len(password)))
 
     def loginClicked(self):
         login = self.loginInput.text()
@@ -64,7 +129,6 @@ class VerificationWindow(QWidget):
                 else:
                     self.loginButton.setText(f"Неверный логин/пароль ({self.failedAttempts}/3)")
 
-
 class MainUserWindow(QWidget):
     def __init__(self, username):
         super().__init__()
@@ -97,7 +161,6 @@ class MainUserWindow(QWidget):
         self.setLayout(layout)
 
     def updateAllowedCharsLabel(self):
-        """Обновляет метку с разрешёнными и запрещёнными символами."""
         flags = d.getFlags(self.username)
         allowed = []
         forbidden = []
@@ -123,7 +186,7 @@ class MainUserWindow(QWidget):
             forbidden.append("специальные символы")
 
         self.allowedCharsLabel.setText(
-            f"Разрешено в пароле: {', '.join(allowed) if allowed else 'нет'}\n"
+            f"Требования к паролю: {', '.join(allowed) if allowed else 'нет'}\n"
             f"Запрещено в пароле: {', '.join(forbidden) if forbidden else 'нет'}"
         )
 
@@ -220,7 +283,6 @@ class changePassFlagsWindow(QWidget):
         self.buttonFlagSpecial.setEnabled(enabled)
 
     def updateFlagStatuses(self, flags):
-        # Обновляем текстовые метки для каждого флага
         self.flagLowerStatus.setText(f"Нижний регистр: {'Включен' if flags[0] == '1' else 'Отключен'}")
         self.flagUpperStatus.setText(f"Верхний регистр: {'Включен' if flags[1] == '1' else 'Отключен'}")
         self.flagDigitStatus.setText(f"Цифры: {'Включен' if flags[2] == '1' else 'Отключен'}")

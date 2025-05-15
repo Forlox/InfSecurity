@@ -16,6 +16,10 @@ def alphabet_strength(password):
     elif number: return 10
     elif special: return 33
 
+def calcSeconds(s, m, u, attempts):
+    pauseCount = math.floor((attempts-1) / m)
+    timeCalculate = attempts/s + pauseCount*u
+    return timeCalculate
 
 def enumtime(s, m, u, attempts):
     pauseCount = math.floor((attempts-1) / m)
@@ -38,7 +42,7 @@ def enumtime(s, m, u, attempts):
 
     seconds = int(timeCalculate)
 
-    print(f"Время перебора: {years} лет {months} месяцев {days} дней {hours} часов {minutes} минут {seconds} секунд")
+    return f"Время перебора:\n{years} лет {months} месяцев {days} дней\n{hours} часов {minutes} минут {seconds} секунд"
 
 
 if __name__ == "__main__":
@@ -54,4 +58,4 @@ if __name__ == "__main__":
         m = float(input("Количество неправильных попыток перед паузой m: "))
         u = float(input("Длительность паузы в секундах u: "))
 
-        enumtime(s, m, u, n**l)
+        print(enumtime(s, m, u, n**l))
